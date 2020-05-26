@@ -41,6 +41,11 @@ import org.apache.commons.text.similarity.LevenshteinDistance;
 /** @author Brian_Entei */
 public class CodeUtil {
 	
+	/** Retrieves the specified system property with the proper authority.
+	 * 
+	 * @param property The name of the system property to be retrieved
+	 * @return The string value of the system property, or <tt><b>null</b></tt>
+	 *         if there is no property with that key. */
 	public static final String getProperty(String property) {
 		return AccessController.doPrivileged(new sun.security.action.GetPropertyAction(property));
 		/*return AccessController.doPrivileged(new PrivilegedAction<String>() {
@@ -52,6 +57,12 @@ public class CodeUtil {
 		});*/
 	}
 	
+	/** Sets the specified system property with the proper authority.
+	 * 
+	 * @param property The name of the system property to be set
+	 * @param value The value that the system property will be set to
+	 * @return The previous value of the system property, or
+	 *         <tt><b>null</b></tt> if it did not have one. */
 	public static final String setProperty(String property, String value) {
 		return AccessController.doPrivileged(new PrivilegedAction<String>() {
 			@Override
@@ -99,32 +110,60 @@ public class CodeUtil {
 		return s.contains("win") ? EnumOS.WINDOWS : (s.contains("mac") ? EnumOS.OSX : (s.contains("solaris") ? EnumOS.SOLARIS : (s.contains("sunos") ? EnumOS.SOLARIS : (s.contains("linux") ? EnumOS.LINUX : (s.contains("unix") ? EnumOS.UNIX : (s.contains("android") ? EnumOS.ANDROID : EnumOS.UNKNOWN))))));
 	}
 	
-	public static final ByteBuffer createByteBuffer(int size) {
-		return (ByteBuffer) ByteBuffer.allocateDirect(size * Byte.SIZE).order(ByteOrder.nativeOrder()).rewind();
+	/** Creates a new direct {@link ByteBuffer} with the given capacity.
+	 * 
+	 * @param capacity The buffer's capacity, in bytes
+	 * @return The new byte buffer */
+	public static final ByteBuffer createByteBuffer(int capacity) {
+		return (ByteBuffer) ByteBuffer.allocateDirect(capacity * Byte.SIZE).order(ByteOrder.nativeOrder()).rewind();
 	}
 	
-	public static final CharBuffer createCharBuffer(int size) {
-		return (CharBuffer) ByteBuffer.allocateDirect(size * Character.SIZE).order(ByteOrder.nativeOrder()).asCharBuffer().rewind();
+	/** Creates a new direct {@link CharBuffer} with the given capacity.
+	 * 
+	 * @param capacity The buffer's capacity, in bytes
+	 * @return The new character buffer */
+	public static final CharBuffer createCharBuffer(int capacity) {
+		return (CharBuffer) ByteBuffer.allocateDirect(capacity * Character.SIZE).order(ByteOrder.nativeOrder()).asCharBuffer().rewind();
 	}
 	
-	public static final ShortBuffer createShortBuffer(int size) {
-		return (ShortBuffer) ByteBuffer.allocateDirect(size * Short.SIZE).order(ByteOrder.nativeOrder()).asShortBuffer().rewind();
+	/** Creates a new direct {@link ShortBuffer} with the given capacity.
+	 * 
+	 * @param capacity The buffer's capacity, in bytes
+	 * @return The new byte buffer */
+	public static final ShortBuffer createShortBuffer(int capacity) {
+		return (ShortBuffer) ByteBuffer.allocateDirect(capacity * Short.SIZE).order(ByteOrder.nativeOrder()).asShortBuffer().rewind();
 	}
 	
-	public static final IntBuffer createIntBuffer(int size) {
-		return (IntBuffer) ByteBuffer.allocateDirect(size * Integer.SIZE).order(ByteOrder.nativeOrder()).asIntBuffer().rewind();
+	/** Creates a new direct {@link IntBuffer} with the given capacity.
+	 * 
+	 * @param capacity The buffer's capacity, in bytes
+	 * @return The new integer buffer */
+	public static final IntBuffer createIntBuffer(int capacity) {
+		return (IntBuffer) ByteBuffer.allocateDirect(capacity * Integer.SIZE).order(ByteOrder.nativeOrder()).asIntBuffer().rewind();
 	}
 	
-	public static final FloatBuffer createFloatBuffer(int size) {
-		return (FloatBuffer) ByteBuffer.allocateDirect(size * Float.SIZE).order(ByteOrder.nativeOrder()).asFloatBuffer().rewind();
+	/** Creates a new direct {@link FloatBuffer} with the given capacity.
+	 * 
+	 * @param capacity The buffer's capacity, in bytes
+	 * @return The new float buffer */
+	public static final FloatBuffer createFloatBuffer(int capacity) {
+		return (FloatBuffer) ByteBuffer.allocateDirect(capacity * Float.SIZE).order(ByteOrder.nativeOrder()).asFloatBuffer().rewind();
 	}
 	
-	public static final LongBuffer createLongBuffer(int size) {
-		return (LongBuffer) ByteBuffer.allocateDirect(size * Long.SIZE).order(ByteOrder.nativeOrder()).asLongBuffer().rewind();
+	/** Creates a new direct {@link LongBuffer} with the given capacity.
+	 * 
+	 * @param capacity The buffer's capacity, in bytes
+	 * @return The new long buffer */
+	public static final LongBuffer createLongBuffer(int capacity) {
+		return (LongBuffer) ByteBuffer.allocateDirect(capacity * Long.SIZE).order(ByteOrder.nativeOrder()).asLongBuffer().rewind();
 	}
 	
-	public static final DoubleBuffer createDoubleBuffer(int size) {
-		return (DoubleBuffer) ByteBuffer.allocateDirect(size * Double.SIZE).order(ByteOrder.nativeOrder()).asDoubleBuffer().rewind();
+	/** Creates a new direct {@link DoubleBuffer} with the given capacity.
+	 * 
+	 * @param capacity The buffer's capacity, in bytes
+	 * @return The new double buffer */
+	public static final DoubleBuffer createDoubleBuffer(int capacity) {
+		return (DoubleBuffer) ByteBuffer.allocateDirect(capacity * Double.SIZE).order(ByteOrder.nativeOrder()).asDoubleBuffer().rewind();
 	}
 	
 	/** @param buf The buffer to get the data from
@@ -301,48 +340,67 @@ public class CodeUtil {
 	
 	private static volatile boolean debugLoggingEnabled = false;
 	
+	/** @return Whether or not debug logging is enabled for the various debug
+	 *         print functions in this class */
 	public static final boolean isDebugLoggingEnabled() {
 		return debugLoggingEnabled;
 	}
 	
+	/** Sets whether or not the various debug print functions in this class are
+	 * enabled.
+	 * 
+	 * @param flag Whether or not debug logging should be enabled for the
+	 *            various debug print functions in this class */
 	public static final void setDebugLoggingEnabled(boolean flag) {
 		debugLoggingEnabled = flag;
 	}
 	
+	/** @param obj The object to be printed to the standard output stream */
 	public static final void print(Object obj) {
 		System.out.print(Objects.toString(obj));
 	}
 	
+	/** @param obj The object to be printed to the standard output stream */
 	public static final void println(Object obj) {
 		System.out.println(Objects.toString(obj));
 	}
 	
+	/** @param obj The object to be printed to the standard error stream */
 	public static final void printErr(Object obj) {
 		System.err.print(Objects.toString(obj));
 	}
 	
+	/** @param obj The object to be printed to the standard error stream */
 	public static final void printErrln(Object obj) {
 		System.err.println(Objects.toString(obj));
 	}
 	
+	/** @param obj The object to be printed to the standard output stream (if
+	 *            debug logging is enabled) */
 	public static final void printDebug(Object obj) {
 		if(debugLoggingEnabled) {
 			System.out.print(Objects.toString(obj));
 		}
 	}
 	
+	/** @param obj The object to be printed to the standard output stream (if
+	 *            debug logging is enabled) */
 	public static final void printlnDebug(Object obj) {
 		if(debugLoggingEnabled) {
 			System.out.println(Objects.toString(obj));
 		}
 	}
 	
+	/** @param obj The object to be printed to the standard error stream (if
+	 *            debug logging is enabled) */
 	public static final void printErrDebug(Object obj) {
 		if(debugLoggingEnabled) {
 			System.err.print(Objects.toString(obj));
 		}
 	}
 	
+	/** @param obj The object to be printed to the standard error stream (if
+	 *            debug logging is enabled) */
 	public static final void printErrlnDebug(Object obj) {
 		if(debugLoggingEnabled) {
 			System.err.println(Objects.toString(obj));
@@ -381,6 +439,12 @@ public class CodeUtil {
 		return d;
 	}
 	
+	/** Returns a string of characters.<br>
+	 * Example: <code>lineOf('a', 5);</code> --&gt; <code>aaaaa</code>
+	 * 
+	 * @param c The character to use
+	 * @param length The number of characters
+	 * @return A string full of the given characters at the given length */
 	public static final String lineOf(char c, int length) {
 		char[] str = new char[length];
 		for(int i = 0; i < length; i++) {
@@ -594,17 +658,19 @@ public class CodeUtil {
 	 * execution) for the specified number of milliseconds, subject to
 	 * the precision and accuracy of system timers and schedulers. The thread
 	 * does not lose ownership of any monitors.
-	 *
-	 * @param millis
-	 *            the length of time to sleep in milliseconds
-	 * 			
-	 * @throws IllegalArgumentException
-	 *             if the value of {@code millis} is negative */
-	public static final void sleep(long millis) {
+	 * 
+	 * @param millis The length of time to sleep in milliseconds
+	 * @return An InterruptedException if the thread was interrupted while
+	 *         sleeping
+	 * @throws IllegalArgumentException Thrown if the value of <tt>millis</tt>
+	 *             is negative */
+	public static final InterruptedException sleep(long millis) throws IllegalArgumentException {
 		try {
 			Thread.sleep(millis);
+			return null;
 		} catch(InterruptedException ex) {
 			Thread.currentThread().interrupt();
+			return ex;
 		}
 	}
 	
