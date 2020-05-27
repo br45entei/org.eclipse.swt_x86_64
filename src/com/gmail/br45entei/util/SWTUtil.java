@@ -26,7 +26,14 @@ import java.util.List;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CCombo;
+import org.eclipse.swt.custom.ST;
 import org.eclipse.swt.custom.StyledText;
+import org.eclipse.swt.dnd.Clipboard;
+import org.eclipse.swt.dnd.TextTransfer;
+import org.eclipse.swt.events.KeyAdapter;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.MenuAdapter;
+import org.eclipse.swt.events.MenuEvent;
 import org.eclipse.swt.events.MouseAdapter;
 import org.eclipse.swt.events.MouseEvent;
 import org.eclipse.swt.events.MouseListener;
@@ -45,12 +52,15 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Listener;
+import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.MenuItem;
 import org.eclipse.swt.widgets.MessageBox;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.TypedListener;
 import org.eclipse.wb.swt.SWTResourceManager;
+
+import etinyplugins.commons.swt.UndoRedoImpl;
 
 /** @author Brian_Entei */
 public class SWTUtil {
@@ -451,6 +461,151 @@ public class SWTUtil {
 		}
 		shell.dispose();
 		return input[0];
+	}
+	
+	/** Adds an <tt>Undo/Redo/Cut/Copy/Paste/Delete/Select All</tt> right-click
+	 * context
+	 * menu (Pop-up menu) to the given {@link StyledText}.<br>
+	 * If the given {@link UndoRedoImpl} is <tt><b>null</b></tt> (or the styled
+	 * text is read only), the Undo and Redo {@link MenuItem}s will not be
+	 * present.
+	 * 
+	 * @param stxt The StyledText that will get a new right-click context menu
+	 * @param undoRedoImpl The {@link UndoRedoImpl} to use for the Undo and Redo
+	 *            {@link MenuItem}s
+	 * @return The newly created {@link Menu} */
+	public static final Menu addTextEditorPopupMenu(final StyledText stxt, final UndoRedoImpl undoRedoImpl) {
+		Menu menu = new Menu(stxt);
+		final Point[] selectionRange = new Point[] {null};
+		final String[] clipboardContents = {null};
+		
+		final MenuItem mntmUndo = new MenuItem(menu, SWT.NONE);
+		mntmUndo.setImage(SWTResourceManager.getImage(SWTUtil.class, "/assets/textures/swt/icons/application/arrow_undo.png"));
+		mntmUndo.setText("Undo\tCtrl+Z");
+		mntmUndo.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				boolean readOnly = (stxt.getStyle() & SWT.READ_ONLY) != 0;
+				boolean editable = stxt.getEditable() && !readOnly;
+				
+				if(editable) {
+					undoRedoImpl.undo();
+				}
+			}
+		});
+		
+		final MenuItem mntmRedo = new MenuItem(menu, SWT.NONE);
+		mntmRedo.setImage(SWTResourceManager.getImage(SWTUtil.class, "/assets/textures/swt/icons/application/arrow_redo.png"));
+		mntmRedo.setText("Redo\tCtrl+Y");
+		mntmRedo.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				boolean readOnly = (stxt.getStyle() & SWT.READ_ONLY) != 0;
+				boolean editable = stxt.getEditable() && !readOnly;
+				
+				if(editable) {
+					undoRedoImpl.redo();
+				}
+			}
+		});
+		
+		final MenuItem separator_1 = new MenuItem(menu, SWT.SEPARATOR);
+		
+		final MenuItem mntmCut = new MenuItem(menu, SWT.NONE);
+		mntmCut.setImage(SWTResourceManager.getImage(SWTUtil.class, "/assets/textures/swt/icons/application/cut.png"));
+		mntmCut.setText("Cut\tCtrl+X");
+		mntmCut.setAccelerator(SWT.CTRL | 'X');
+		mntmCut.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				stxt.invokeAction(ST.CUT);//Totally didn't know this was a thing! Thanks internet! https://stackoverflow.com/a/7193423
+			}
+		});
+		
+		final MenuItem mntmCopy = new MenuItem(menu, SWT.NONE);
+		mntmCopy.setImage(SWTResourceManager.getImage(SWTUtil.class, "/assets/textures/swt/icons/application/page_copy.png"));
+		mntmCopy.setText("Copy\tCtrl+C");
+		mntmCopy.setAccelerator(SWT.CTRL | 'X');
+		mntmCopy.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				stxt.invokeAction(ST.COPY);
+			}
+		});
+		
+		final MenuItem mntmPaste = new MenuItem(menu, SWT.NONE);
+		mntmPaste.setImage(SWTResourceManager.getImage(SWTUtil.class, "/assets/textures/swt/icons/application/paste_plain.png"));
+		mntmPaste.setText("Paste\tCtrl+V");
+		mntmPaste.setAccelerator(SWT.CTRL | 'X');
+		mntmPaste.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				stxt.invokeAction(ST.PASTE);
+			}
+		});
+		
+		final MenuItem mntmDelete = new MenuItem(menu, SWT.NONE);
+		mntmDelete.setImage(SWTResourceManager.getImage(SWTUtil.class, "/assets/textures/swt/icons/application/cross.png"));
+		mntmDelete.setText("Delete\tDel");
+		mntmDelete.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				stxt.invokeAction(ST.DELETE_NEXT);
+			}
+		});
+		
+		new MenuItem(menu, SWT.SEPARATOR);
+		
+		final MenuItem mntmSelectAll = new MenuItem(menu, SWT.NONE);
+		mntmSelectAll.setImage(SWTResourceManager.getImage(SWTUtil.class, "/assets/textures/swt/icons/application/page_white_stack.png"));
+		mntmSelectAll.setText("Select All\tCtrl+A");
+		mntmSelectAll.setAccelerator(SWT.CTRL | 'A');
+		mntmSelectAll.addSelectionListener(new SelectionAdapter() {
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				stxt.invokeAction(ST.SELECT_ALL);
+			}
+		});
+		stxt.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyPressed(KeyEvent e) {
+				if((e.stateMask & SWT.CTRL) != 0 && (e.stateMask & SWT.SHIFT) == 0 && e.keyCode == 'a') {
+					stxt.invokeAction(ST.SELECT_ALL);
+				}
+			}
+		});
+		
+		menu.addMenuListener(new MenuAdapter() {
+			@Override
+			public void menuShown(MenuEvent e) {
+				boolean readOnly = (stxt.getStyle() & SWT.READ_ONLY) != 0;
+				boolean editable = stxt.getEditable() && !readOnly;
+				String selection = stxt.getSelectionText();
+				selection = selection.isEmpty() ? null : selection;
+				selectionRange[0] = selection == null ? null : stxt.getSelection();
+				Clipboard clipboard = new Clipboard(stxt.getDisplay());
+				Object data = clipboard.getContents(TextTransfer.getInstance());
+				clipboardContents[0] = data instanceof String ? (String) data : null;
+				clipboard.dispose();
+				
+				if(readOnly || undoRedoImpl == null) {
+					mntmUndo.dispose();
+					mntmRedo.dispose();
+					separator_1.dispose();
+				} else if(!mntmUndo.isDisposed() && !mntmRedo.isDisposed()) {
+					mntmUndo.setEnabled(editable && undoRedoImpl.canUndo());
+					mntmRedo.setEnabled(editable && undoRedoImpl.canRedo());
+				}
+				mntmCut.setEnabled(editable && selectionRange[0] != null);
+				mntmCopy.setEnabled(selectionRange[0] != null);
+				mntmPaste.setEnabled(editable && clipboardContents[0] != null);
+				mntmDelete.setEnabled(editable && selectionRange[0] != null);
+				mntmSelectAll.setEnabled(true);
+			}
+		});
+		
+		stxt.setMenu(menu);
+		return menu;
 	}
 	
 }
