@@ -148,6 +148,50 @@ public class SWTUtil {
 		return false;
 	}
 	
+	public static final void setTextFor(StyledText styledText, String text) {
+		/*if(styledText.getText().equals(text)) {
+			return;
+		}*/
+		final int numOfVisibleLines = Math.floorDiv(styledText.getSize().y, styledText.getLineHeight());
+		final int originalIndex = styledText.getTopIndex();
+		int index = originalIndex;
+		final int lineCount = styledText.getLineCount();
+		/*if(HTTPClientRequest.debug) {
+			this.inputField.setText("index: \"" + index + "\"; line count: \"" + lineCount + "\"; visible lines: \"" + numOfVisibleLines + "\";");
+		}*/
+		//Main.runClock();
+		if(lineCount - index == numOfVisibleLines) {
+			index = -1;
+		}
+		final Point selection = styledText.getSelection();
+		final int caretOffset = styledText.getCaretOffset();
+		//==
+		//styledText.setText(text);
+		styledText.getContent().setText(text);
+		//==
+		try {
+			if(caretOffset == selection.x) {//Right to left text selection
+				styledText.setCaretOffset(caretOffset);
+				styledText.setSelection(selection.y, selection.x);
+			} else {//Left to right text selection
+				styledText.setSelection(selection);
+				styledText.setCaretOffset(caretOffset);
+			}
+		} catch(IllegalArgumentException ignored) {
+		}
+		final int newLineCount = styledText.getLineCount();
+		if(index == -1) {
+			index = newLineCount - 1;
+		} else {
+			if(newLineCount >= lineCount) {
+				index = newLineCount - (lineCount - index);
+			} else {
+				index = newLineCount - (newLineCount - index);
+			}
+		}
+		styledText.setTopIndex(index);//originalIndex);//this.isScrollLocked ? originalIndex : index);
+	}
+	
 	public static final boolean setToolTipText(Control control, String string) {
 		if(!control.getToolTipText().equals(string)) {
 			control.setToolTipText(string);
