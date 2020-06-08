@@ -460,6 +460,9 @@ public class CodeUtil {
 	 *            <code>numOfPads</code>
 	 * @return The limited decimal */
 	public static final String limitDecimalNoRounding(double decimal, int numOfPlaces, boolean pad) {
+		if(Double.isNaN(decimal) || Double.isInfinite(decimal)) {
+			return Double.toString(decimal);
+		}
 		String padStr = pad ? lineOf('0', numOfPlaces) : "0";
 		if(Double.doubleToLongBits(decimal) == Double.doubleToLongBits(0.0)) {
 			return "0" + (numOfPlaces != 0 ? "." + padStr : "");

@@ -13,13 +13,21 @@ import java.util.Locale;
 /** @author Brian_Entei */
 public class LogKeeper extends OutputStream {
 	
+	/** Tests the LogKeeper class to ensure that it is working properly.
+	 * 
+	 * @param args Program command line arguments */
+	@SuppressWarnings("resource")
 	public static final void main(String[] args) {
-		System.out.println(new LogKeeper(StandardCharsets.ISO_8859_1, true, 20000).print("Hello, world!").getText());
+		LogKeeper pr = new LogKeeper(StandardCharsets.ISO_8859_1, true, 20000);
+		pr.println("Hello, world!");
+		System.out.print(pr.getText());
+		System.out.flush();
 	}
 	
 	private volatile Charset charset;
 	private final PrintStream pr;
 	private volatile int textLengthLimit = 20000;
+	private volatile String logPrefix = null;
 	
 	//==============================================================================
 	
@@ -49,6 +57,15 @@ public class LogKeeper extends OutputStream {
 	
 	//==============================================================================
 	
+	/** Creates a new LogKeeper with the specified settings.
+	 * 
+	 * @param charset The charset to use when converting strings to/from bytes
+	 * @param autoFlush If true, the output buffer will be flushed
+	 *            whenever a byte array is written, one of the
+	 *            <code>println</code> methods is invoked, or a newline
+	 *            character or byte (<code>'\n'</code>) is written
+	 * @param textLengthLimit The maximum number of text characters that this
+	 *            log will hold. Set to <tt>-1</tt> to specify no limit. */
 	public LogKeeper(Charset charset, boolean autoFlush, int textLengthLimit) {
 		this.charset = charset == null ? StandardCharsets.ISO_8859_1 : charset;
 		try {
@@ -63,6 +80,44 @@ public class LogKeeper extends OutputStream {
 			throw new IllegalStateException(ex);
 		}
 		this.textLengthLimit = textLengthLimit;
+	}
+	
+	/** Returns the charset that this LogKeeper is currently using to convert
+	 * strings from/to raw data.
+	 * 
+	 * @return The charset that this LogKeeper is currently using. */
+	public Charset getCharset() {
+		return this.charset;
+	}
+	
+	/** Sets the charset that this LogKeeper will use when converting strings
+	 * to/from raw data.
+	 * 
+	 * @param charset The charset to use. <tt><b>null</b></tt> may be used to
+	 *            specify the default charset (which is
+	 *            {@link StandardCharsets#ISO_8859_1 ISO_8859_1}) */
+	public void setCharset(Charset charset) {
+		this.charset = charset == null ? StandardCharsets.ISO_8859_1 : charset;
+	}
+	
+	/** Returns the log prefix that this LogKeeper currently has set. May be
+	 * <tt><b>null</b></tt>.<br>
+	 * This is used by the various <code>println(...)</code> methods in this
+	 * class.
+	 * 
+	 * @return This LogKeeper's log prefix */
+	public String getLogPrefix() {
+		return this.logPrefix;
+	}
+	
+	/** Sets the log prefix for this LogKeeper.<br>
+	 * This is used by the various <code>println(...)</code> methods in this
+	 * class.
+	 * 
+	 * @param prefix The log prefix to set for this LogKeeper. May be
+	 *            <tt><b>null</b></tt>. */
+	public void setLogPrefix(String prefix) {
+		this.logPrefix = prefix;
 	}
 	
 	/** The maximum size of array to allocate.
@@ -118,31 +173,48 @@ public class LogKeeper extends OutputStream {
 		return text;
 	}
 	
-	public synchronized byte[] getData(boolean reset) {
+	/** Obtains a copy of the raw data stored within this LogKeeper, and clears
+	 * it if <tt>clear</tt> is <tt>true</tt>.
+	 * 
+	 * @param clear Whether or not {@link #clear()} should be called.
+	 * @return The raw data currently stored within this LogKeeper */
+	public synchronized byte[] getData(boolean clear) {
 		byte[] data = Arrays.copyOf(this.buf, this.count);
-		if(reset) {
-			this.count = 0;
+		if(clear) {
+			this.clear();
 		}
 		return data;
 	}
 	
-	/** Clears the contents of this LogKeeper's buffer.
-	 * 
-	 * @return This LogKeeper */
-	public synchronized LogKeeper clear() {
+	/** Clears the contents of this LogKeeper's buffer. */
+	public synchronized void clear() {
 		this.pr.flush();
 		this.count = this.mark = this.pos = 0;
-		return this;
 	}
 	
-	public synchronized LogKeeper setData(byte[] data, int off, int len) throws IndexOutOfBoundsException {
+	/** Sets the raw data stored within this LogKeeper to the given bytes.
+	 * 
+	 * @param data The byte buffer containing the data
+	 * @param off The offset within the buffer to copy the data from
+	 * @param len The number of bytes to copy from the buffer
+	 * @throws IndexOutOfBoundsException If the offset is less than 0,<br>
+	 *             the offset is greater than the length of the buffer,<br>
+	 *             the length is less than 0,<br>
+	 *             the offset plus the length is greater than the length of the
+	 *             buffer, or<br>
+	 *             the offset plus the length is less than 0. */
+	public synchronized void setData(byte[] data, int off, int len) throws IndexOutOfBoundsException {
 		this.clear();
 		this.write(data, 0, len);
-		return this;
 	}
 	
-	public synchronized LogKeeper setData(byte[] data) {
-		return this.setData(data, 0, data.length);
+	/** Sets the raw data stored within this LogKeeper to the given bytes.<br>
+	 * This method is equivalent to calling {@link #setData(byte[], int, int)
+	 * setData(data, 0, data.length};}
+	 * 
+	 * @param data The byte buffer containing the data */
+	public synchronized void setData(byte[] data) {
+		this.setData(data, 0, data.length);
 	}
 	
 	/** @return The number of valid bytes in this LogKeeper's buffer. */
@@ -150,6 +222,7 @@ public class LogKeeper extends OutputStream {
 		return this.count;
 	}
 	
+	/** {@inheritDoc} */
 	@Override
 	public synchronized void write(int b) {
 		this.ensureCapacity(this.count + 1);
@@ -157,11 +230,20 @@ public class LogKeeper extends OutputStream {
 		this.count += 1;
 	}
 	
+	/** {@inheritDoc} */
 	@Override
 	public synchronized void write(byte[] b) {
 		this.write(b, 0, b.length);
 	}
 	
+	/** {@inheritDoc}
+	 * 
+	 * @throws IndexOutOfBoundsException If the offset is less than 0,<br>
+	 *             the offset is greater than the length of the buffer,<br>
+	 *             the length is less than 0,<br>
+	 *             the offset plus the length is greater than the length of the
+	 *             buffer, or<br>
+	 *             the offset plus the length is less than 0. */
 	@Override
 	public synchronized void write(byte[] b, int off, int len) throws IndexOutOfBoundsException {
 		if((off < 0) || (off > b.length) || (len < 0) ||//
@@ -193,17 +275,36 @@ public class LogKeeper extends OutputStream {
 	public void close() {
 	}
 	
-	public synchronized String getText(boolean reset) {
-		return this.updateText();//new String(this.buf, 0, this.count, this.charset);
+	/** Obtains a copy of this LogKeeper's raw data and converts it into a
+	 * string using this keeper's charset.
+	 * 
+	 * @param clear Whether or not {@link #clear()} should be called.
+	 * @return The raw data currently stored within this LogKeeper, converted
+	 *         into a string */
+	public synchronized String getText(boolean clear) {
+		String text = this.updateText();//new String(this.buf, 0, this.count, this.charset);
+		if(clear) {
+			this.clear();
+		}
+		return text;
 	}
 	
+	/** Obtains a copy of this LogKeeper's raw data and converts it into a
+	 * string using this keeper's charset.
+	 * 
+	 * @return The raw data currently stored within this LogKeeper, converted
+	 *         into a string */
 	public synchronized String getText() {
 		return this.getText(false);
 	}
 	
-	public synchronized LogKeeper setText(String text) {
+	/** Sets the raw data of this LogKeeper to the bytes of the given string,
+	 * which is converted using this keeper's charset.
+	 * 
+	 * @param text The string whose bytes will be used */
+	public synchronized void setText(String text) {
 		text = text == null ? "" : text;
-		return this.setData(text.getBytes(this.charset));
+		this.setData(text.getBytes(this.charset));
 	}
 	
 	//====================================================================================================================================================
@@ -214,11 +315,9 @@ public class LogKeeper extends OutputStream {
 	 * are written in exactly the manner of the
 	 * <code>{@link #write(int)}</code> method.
 	 *
-	 * @param b The <code>boolean</code> to be printed.
-	 * @return This LogKeeper */
-	public synchronized LogKeeper print(boolean b) {
+	 * @param b The <code>boolean</code> to be printed. */
+	public synchronized void print(boolean b) {
 		this.pr.print(b);
-		return this;
 	}
 	
 	/** Prints a character. The character is translated into one or more bytes
@@ -226,11 +325,9 @@ public class LogKeeper extends OutputStream {
 	 * are written in exactly the manner of the
 	 * <code>{@link #write(int)}</code> method.
 	 *
-	 * @param c The <code>char</code> to be printed.
-	 * @return This LogKeeper */
-	public synchronized LogKeeper print(char c) {
+	 * @param c The <code>char</code> to be printed. */
+	public synchronized void print(char c) {
 		this.pr.print(c);
-		return this;
 	}
 	
 	/** Prints an integer. The string produced by <code>{@link
@@ -240,11 +337,9 @@ public class LogKeeper extends OutputStream {
 	 * <code>{@link #write(int)}</code> method.
 	 *
 	 * @param i The <code>int</code> to be printed.
-	 * @return This LogKeeper
 	 * @see java.lang.Integer#toString(int) */
-	public synchronized LogKeeper print(int i) {
+	public synchronized void print(int i) {
 		this.pr.print(i);
-		return this;
 	}
 	
 	/** Prints a long integer. The string produced by <code>{@link
@@ -254,11 +349,9 @@ public class LogKeeper extends OutputStream {
 	 * <code>{@link #write(int)}</code> method.
 	 *
 	 * @param l The <code>long</code> to be printed.
-	 * @return This LogKeeper
 	 * @see java.lang.Long#toString(long) */
-	public synchronized LogKeeper print(long l) {
+	public synchronized void print(long l) {
 		this.pr.print(l);
-		return this;
 	}
 	
 	/** Prints a floating-point number. The string produced by <code>{@link
@@ -268,11 +361,9 @@ public class LogKeeper extends OutputStream {
 	 * <code>{@link #write(int)}</code> method.
 	 *
 	 * @param f The <code>float</code> to be printed.
-	 * @return This LogKeeper
 	 * @see java.lang.Float#toString(float) */
-	public synchronized LogKeeper print(float f) {
+	public synchronized void print(float f) {
 		this.pr.print(f);
-		return this;
 	}
 	
 	/** Prints a double-precision floating-point number. The string produced by
@@ -282,11 +373,9 @@ public class LogKeeper extends OutputStream {
 	 * #write(int)}</code> method.
 	 *
 	 * @param d The <code>double</code> to be printed.
-	 * @return This LogKeeper
 	 * @see java.lang.Double#toString(double) */
-	public synchronized LogKeeper print(double d) {
+	public synchronized void print(double d) {
 		this.pr.print(d);
-		return this;
 	}
 	
 	/** Prints an array of characters. The characters are converted into bytes
@@ -295,12 +384,10 @@ public class LogKeeper extends OutputStream {
 	 * <code>{@link #write(int)}</code> method.
 	 *
 	 * @param s The array of chars to be printed.
-	 * @return This LogKeeper
 	 *
 	 * @throws NullPointerException If <code>s</code> is <code>null</code> */
-	public synchronized LogKeeper print(char s[]) {
+	public synchronized void print(char s[]) {
 		this.pr.print(s);
-		return this;
 	}
 	
 	/** Prints a string. If the argument is <code>null</code> then the string
@@ -309,11 +396,9 @@ public class LogKeeper extends OutputStream {
 	 * encoding, and these bytes are written in exactly the manner of the
 	 * <code>{@link #write(int)}</code> method.
 	 *
-	 * @param s The <code>String</code> to be printed.
-	 * @return This LogKeeper */
-	public synchronized LogKeeper print(String s) {
+	 * @param s The <code>String</code> to be printed. */
+	public synchronized void print(String s) {
 		this.pr.print(s);
-		return this;
 	}
 	
 	/** Prints an object. The string produced by the <code>{@link
@@ -323,11 +408,9 @@ public class LogKeeper extends OutputStream {
 	 * <code>{@link #write(int)}</code> method.
 	 *
 	 * @param obj The <code>Object</code> to be printed.
-	 * @return This LogKeeper
 	 * @see java.lang.Object#toString() */
-	public synchronized LogKeeper print(Object obj) {
+	public synchronized void print(Object obj) {
 		this.pr.print(obj);
-		return this;
 	}
 	
 	/* Methods that do terminate lines */
@@ -335,100 +418,117 @@ public class LogKeeper extends OutputStream {
 	/** Terminates the current line by writing the line separator string. The
 	 * line separator string is defined by the system property
 	 * <code>line.separator</code>, and is not necessarily a single newline
-	 * character (<code>'\n'</code>).
-	 * 
-	 * @return This LogKeeper */
-	public synchronized LogKeeper println() {
+	 * character (<code>'\n'</code>). */
+	public synchronized void println() {
+		String logPrefix = this.getLogPrefix();
+		if(logPrefix != null) {
+			this.pr.print(logPrefix);
+		}
 		this.pr.println();
-		return this;
 	}
 	
 	/** Prints a boolean and then terminates the line. This method behaves as
 	 * though it invokes <code>{@link #print(boolean)}</code> and then
 	 * <code>{@link #println()}</code>.
 	 *
-	 * @param b The <code>boolean</code> to be printed.
-	 * @return This LogKeeper */
-	public synchronized LogKeeper println(boolean b) {
+	 * @param b The <code>boolean</code> to be printed. */
+	public synchronized void println(boolean b) {
+		String logPrefix = this.getLogPrefix();
+		if(logPrefix != null) {
+			this.pr.print(logPrefix);
+		}
 		this.pr.println(b);
-		return this;
 	}
 	
 	/** Prints a character and then terminates the line. This method behaves as
 	 * though it invokes <code>{@link #print(char)}</code> and then
 	 * <code>{@link #println()}</code>.
 	 *
-	 * @param c The <code>char</code> to be printed.
-	 * @return This LogKeeper */
-	public synchronized LogKeeper println(char c) {
+	 * @param c The <code>char</code> to be printed. */
+	public synchronized void println(char c) {
+		String logPrefix = this.getLogPrefix();
+		if(logPrefix != null) {
+			this.pr.print(logPrefix);
+		}
 		this.pr.println(c);
-		return this;
 	}
 	
 	/** Prints an integer and then terminates the line. This method behaves as
 	 * though it invokes <code>{@link #print(int)}</code> and then
 	 * <code>{@link #println()}</code>.
 	 *
-	 * @param i The <code>int</code> to be printed.
-	 * @return This LogKeeper */
-	public synchronized LogKeeper println(int i) {
+	 * @param i The <code>int</code> to be printed. */
+	public synchronized void println(int i) {
+		String logPrefix = this.getLogPrefix();
+		if(logPrefix != null) {
+			this.pr.print(logPrefix);
+		}
 		this.pr.println(i);
-		return this;
 	}
 	
 	/** Prints a long and then terminates the line. This method behaves as
 	 * though it invokes <code>{@link #print(long)}</code> and then
 	 * <code>{@link #println()}</code>.
 	 *
-	 * @param l a The <code>long</code> to be printed.
-	 * @return This LogKeeper */
-	public synchronized LogKeeper println(long l) {
+	 * @param l a The <code>long</code> to be printed. */
+	public synchronized void println(long l) {
+		String logPrefix = this.getLogPrefix();
+		if(logPrefix != null) {
+			this.pr.print(logPrefix);
+		}
 		this.pr.println(l);
-		return this;
 	}
 	
 	/** Prints a float and then terminates the line. This method behaves as
 	 * though it invokes <code>{@link #print(float)}</code> and then
 	 * <code>{@link #println()}</code>.
 	 *
-	 * @param f The <code>float</code> to be printed.
-	 * @return This LogKeeper */
-	public synchronized LogKeeper println(float f) {
+	 * @param f The <code>float</code> to be printed. */
+	public synchronized void println(float f) {
+		String logPrefix = this.getLogPrefix();
+		if(logPrefix != null) {
+			this.pr.print(logPrefix);
+		}
 		this.pr.println(f);
-		return this;
 	}
 	
 	/** Prints a double and then terminates the line. This method behaves as
 	 * though it invokes <code>{@link #print(double)}</code> and then
 	 * <code>{@link #println()}</code>.
 	 *
-	 * @param d The <code>double</code> to be printed.
-	 * @return This LogKeeper */
-	public synchronized LogKeeper println(double d) {
+	 * @param d The <code>double</code> to be printed. */
+	public synchronized void println(double d) {
+		String logPrefix = this.getLogPrefix();
+		if(logPrefix != null) {
+			this.pr.print(logPrefix);
+		}
 		this.pr.println(d);
-		return this;
 	}
 	
 	/** Prints an array of characters and then terminates the line. This method
 	 * behaves as though it invokes <code>{@link #print(char[])}</code> and
 	 * then <code>{@link #println()}</code>.
 	 *
-	 * @param s an array of chars to print.
-	 * @return This LogKeeper */
-	public synchronized LogKeeper println(char s[]) {
+	 * @param s an array of chars to print. */
+	public synchronized void println(char s[]) {
+		String logPrefix = this.getLogPrefix();
+		if(logPrefix != null) {
+			this.pr.print(logPrefix);
+		}
 		this.pr.println(s);
-		return this;
 	}
 	
 	/** Prints a String and then terminates the line. This method behaves as
 	 * though it invokes <code>{@link #print(String)}</code> and then
 	 * <code>{@link #println()}</code>.
 	 *
-	 * @param s The <code>String</code> to be printed.
-	 * @return This LogKeeper */
-	public synchronized LogKeeper println(String s) {
+	 * @param s The <code>String</code> to be printed. */
+	public synchronized void println(String s) {
+		String logPrefix = this.getLogPrefix();
+		if(logPrefix != null) {
+			this.pr.print(logPrefix);
+		}
 		this.pr.println(s);
-		return this;
 	}
 	
 	/** Prints an Object and then terminates the line. This method calls
@@ -437,11 +537,13 @@ public class LogKeeper extends OutputStream {
 	 * though it invokes <code>{@link #print(String)}</code> and then
 	 * <code>{@link #println()}</code>.
 	 *
-	 * @param obj The <code>Object</code> to be printed.
-	 * @return This LogKeeper */
-	public synchronized LogKeeper println(Object obj) {
+	 * @param obj The <code>Object</code> to be printed. */
+	public synchronized void println(Object obj) {
+		String logPrefix = this.getLogPrefix();
+		if(logPrefix != null) {
+			this.pr.print(logPrefix);
+		}
 		this.pr.println(obj);
-		return this;
 	}
 	
 	/** A convenience method to write a formatted string to this output stream
@@ -482,13 +584,9 @@ public class LogKeeper extends OutputStream {
 	 *             formatter class specification.
 	 * 			
 	 * @throws NullPointerException
-	 *             If the <tt>format</tt> is <tt>null</tt>
-	 * 			
-	 * @return This output stream
-	 * 			
-	 * @since 1.5 */
-	public synchronized PrintStream printf(String format, Object... args) {
-		return this.pr.printf(format, args);
+	 *             If the <tt>format</tt> is <tt>null</tt> */
+	public synchronized void printf(String format, Object... args) {
+		this.pr.printf(format, args);
 	}
 	
 	/** A convenience method to write a formatted string to this output stream
@@ -535,13 +633,9 @@ public class LogKeeper extends OutputStream {
 	 *             formatter class specification.
 	 * 			
 	 * @throws NullPointerException
-	 *             If the <tt>format</tt> is <tt>null</tt>
-	 * 			
-	 * @return This output stream
-	 * 			
-	 * @since 1.5 */
-	public PrintStream printf(Locale l, String format, Object... args) {
-		return this.pr.printf(l, format, args);
+	 *             If the <tt>format</tt> is <tt>null</tt> */
+	public synchronized void printf(Locale l, String format, Object... args) {
+		this.pr.printf(l, format, args);
 	}
 	
 	/** Writes a formatted string to this output stream using the specified
@@ -579,13 +673,9 @@ public class LogKeeper extends OutputStream {
 	 *             formatter class specification.
 	 * 			
 	 * @throws NullPointerException
-	 *             If the <tt>format</tt> is <tt>null</tt>
-	 * 			
-	 * @return This output stream
-	 * 			
-	 * @since 1.5 */
-	public PrintStream format(String format, Object... args) {
-		return this.pr.format(format, args);
+	 *             If the <tt>format</tt> is <tt>null</tt> */
+	public synchronized void format(String format, Object... args) {
+		this.pr.format(format, args);
 	}
 	
 	/** Writes a formatted string to this output stream using the specified
@@ -624,13 +714,9 @@ public class LogKeeper extends OutputStream {
 	 *             formatter class specification.
 	 * 			
 	 * @throws NullPointerException
-	 *             If the <tt>format</tt> is <tt>null</tt>
-	 * 			
-	 * @return This output stream
-	 * 			
-	 * @since 1.5 */
-	public PrintStream format(Locale l, String format, Object... args) {
-		return this.pr.format(l, format, args);
+	 *             If the <tt>format</tt> is <tt>null</tt> */
+	public synchronized void format(Locale l, String format, Object... args) {
+		this.pr.format(l, format, args);
 	}
 	
 	/** Appends the specified character sequence to this output stream.
@@ -653,13 +739,9 @@ public class LogKeeper extends OutputStream {
 	 * @param csq
 	 *            The character sequence to append. If <tt>csq</tt> is
 	 *            <tt>null</tt>, then the four characters <tt>"null"</tt> are
-	 *            appended to this output stream.
-	 * 			
-	 * @return This output stream
-	 * 			
-	 * @since 1.5 */
-	public PrintStream append(CharSequence csq) {
-		return this.pr.append(csq);
+	 *            appended to this output stream. */
+	public synchronized void append(CharSequence csq) {
+		this.pr.append(csq);
 	}
 	
 	/** Appends a subsequence of the specified character sequence to this output
@@ -687,17 +769,13 @@ public class LogKeeper extends OutputStream {
 	 *            The index of the character following the last character in the
 	 *            subsequence
 	 *
-	 * @return This output stream
-	 *
 	 * @throws IndexOutOfBoundsException
 	 *             If <tt>start</tt> or <tt>end</tt> are negative,
 	 *             <tt>start</tt>
 	 *             is greater than <tt>end</tt>, or <tt>end</tt> is greater than
-	 *             <tt>csq.length()</tt>
-	 *
-	 * @since 1.5 */
-	public PrintStream append(CharSequence csq, int start, int end) {
-		return this.pr.append(csq, start, end);
+	 *             <tt>csq.length()</tt> */
+	public synchronized void append(CharSequence csq, int start, int end) {
+		this.pr.append(csq, start, end);
 	}
 	
 	/** Appends the specified character to this output stream.
@@ -711,13 +789,9 @@ public class LogKeeper extends OutputStream {
 	 * </pre>
 	 *
 	 * @param c
-	 *            The 16-bit character to append
-	 * 			
-	 * @return This output stream
-	 * 			
-	 * @since 1.5 */
-	public PrintStream append(char c) {
-		return this.pr.append(c);
+	 *            The 16-bit character to append */
+	public synchronized void append(char c) {
+		this.pr.append(c);
 	}
 	
 	//====================================================================================================================================================
@@ -727,7 +801,7 @@ public class LogKeeper extends OutputStream {
 	 * 
 	 * @param ex The {@link Throwable} to print
 	 * @return This LogKeeper */
-	public LogKeeper printStackTrace(Throwable ex) {
+	public synchronized LogKeeper printStackTrace(Throwable ex) {
 		ex.printStackTrace(this.pr);
 		return this;
 	}
@@ -749,6 +823,42 @@ public class LogKeeper extends OutputStream {
 		return (this.pos < this.count) ? (this.buf[this.pos++] & 0xff) : -1;
 	}
 	
+	/** Reads some number of bytes from this LogKeeper's internal buffer and
+	 * stores them into the buffer array <code>b</code>. The number of bytes
+	 * actually read is returned as an integer.
+	 * <p>
+	 * This <code>read</code> method cannot block.
+	 *
+	 * <p>
+	 * If the length of <code>b</code> is zero, then no bytes are read and
+	 * <code>0</code> is returned; otherwise, there is an attempt to read at
+	 * least one byte. If no byte is available because the stream is at the
+	 * end of the file, the value <code>-1</code> is returned; otherwise, at
+	 * least one byte is read and stored into <code>b</code>.
+	 *
+	 * <p>
+	 * The first byte read is stored into element <code>b[0]</code>, the
+	 * next one into <code>b[1]</code>, and so on. The number of bytes read is,
+	 * at most, equal to the length of <code>b</code>. Let <i>k</i> be the
+	 * number of bytes actually read; these bytes will be stored in elements
+	 * <code>b[0]</code> through <code>b[</code><i>k</i><code>-1]</code>,
+	 * leaving elements <code>b[</code><i>k</i><code>]</code> through
+	 * <code>b[b.length-1]</code> unaffected.
+	 *
+	 * <p>
+	 * The <code>read(b)</code> method for class <code>LogKeeper</code>
+	 * has the same effect as:
+	 * 
+	 * <pre>
+	 * <code> read(b, 0, b.length) </code>
+	 * </pre>
+	 *
+	 * @param b the buffer into which the data is read.
+	 * @return the total number of bytes read into the buffer, or
+	 *         <code>-1</code> if there is no more data because the end of
+	 *         the stream has been reached.
+	 * @exception NullPointerException if <code>b</code> is <code>null</code>.
+	 * @see #read(byte[], int, int) */
 	public synchronized int read(byte[] b) {
 		return this.read(b, 0, b.length);
 	}
@@ -827,15 +937,13 @@ public class LogKeeper extends OutputStream {
 	/** Sets the buffer to the given position for reading.
 	 * 
 	 * @param pos The position of the read buffer to set
-	 * @return This LogKeeper
 	 * @throws IndexOutOfBoundsException If <code>pos</code> is either negative
 	 *             or greater than {@link #size()} */
-	public synchronized LogKeeper seek(int pos) throws IndexOutOfBoundsException {
+	public synchronized void seek(int pos) throws IndexOutOfBoundsException {
 		if(pos < 0 || pos >= this.count) {
 			throw new IndexOutOfBoundsException();
 		}
 		this.pos = pos;
-		return this;
 	}
 	
 	/** Returns the number of remaining bytes that can be read (or skipped over)
@@ -855,6 +963,7 @@ public class LogKeeper extends OutputStream {
 	 * always returns <code>true</code>.
 	 * 
 	 * @return True */
+	@SuppressWarnings("static-method")
 	public boolean markSupported() {
 		return true;
 	}
@@ -867,23 +976,23 @@ public class LogKeeper extends OutputStream {
 	 * If no mark has been set, then the value of the mark is 0.
 	 *
 	 * <p>
-	 * Note: The <code>readAheadLimit</code> for this class
-	 * has no meaning. */
-	public void mark(int readAheadLimit) {
+	 * Note: The <code>readlimit</code> for this class
+	 * has no meaning.
+	 * 
+	 * @param readlimit the maximum limit of bytes that can be read before
+	 *            the mark position becomes invalid. */
+	public synchronized void mark(int readlimit) {
 		this.mark = this.pos;
 	}
 	
-	/** Returns the buffer to the beginning for reading.
-	 * 
-	 * @return This LogKeeper */
-	public synchronized LogKeeper rewind() {
+	/** Returns the buffer to the beginning for reading. */
+	public synchronized void rewind() {
 		this.pos = 0;
-		return this;
 	}
 	
-	public synchronized LogKeeper markBeginning() {
+	/** Resets the marked position to the beginning. */
+	public synchronized void markBeginning() {
 		this.mark = 0;
-		return this;
 	}
 	
 	/** Resets the buffer to the marked position. The marked position
@@ -895,8 +1004,8 @@ public class LogKeeper extends OutputStream {
 	/** Returns a dummy InputStream whose methods are routed back to this
 	 * LogKeeper.<br>
 	 * Operations performed on the returned InputStream are performed on this
-	 * LogKeeper, and are therefore visible to any further InputStreams returned
-	 * by this method.<br>
+	 * LogKeeper, and are therefore affect any further InputStreams returned by
+	 * this method.<br>
 	 * To reset the InputStream to the beginning, use {@link #seek(int)} with a
 	 * position of 0.
 	 * 
