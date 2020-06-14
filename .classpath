@@ -9,6 +9,17 @@
 			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="org.eclipse.swt"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="libs/commons-lang3-3.3.2.jar" sourcepath="libs/commons-lang3-3.3.2-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/org.eclipse.swt_x86_64/libs/commons-lang3-3.3.2-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="libs/apache-commons.jar" sourcepath="/ApacheCommons"/>
+	<classpathentry kind="lib" path="libs/bcprov-jdk15on-153.jar" sourcepath="libs/bcprov-jdk15on-153-src.zip">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/org.eclipse.swt_x86_64/libs/bcprov-jdk15on-153-javadoc.zip!/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="src" path="apacheCommons">
 		<attributes>
 			<attribute name="ignore_optional_problems" value="true"/>
