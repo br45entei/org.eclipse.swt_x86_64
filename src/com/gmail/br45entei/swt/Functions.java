@@ -162,10 +162,13 @@ public class Functions {
 	}
 	
 	public static final void main(String[] args) {
-		long test = 157483213;
-		String humanReadable = humanReadableByteCount(test, true, 6);
-		String result = new BigDecimal(fromHumanReadableByteCount(humanReadable, true)).toPlainString();
-		System.out.println("test long: " + test + "; readable: " + humanReadable + "; converted back to double: " + result);
+		long test = 157483;//213;
+		for(int i = 0; i < 2; i++) {
+			boolean si = i == 1;
+			String humanReadable = humanReadableByteCount(test, si, 16);
+			String result = new BigDecimal(fromHumanReadableByteCount(humanReadable, si)).toPlainString();
+			System.out.println("SI: " + si + "; test long: " + test + "; readable: " + humanReadable + "; converted back to double: " + result + (Long.toString(test).equals(result) ? " (Pass)" : " (Fail)"));
+		}
 	}
 	
 	/** @param bytes The humanReadableByteCount generated from
@@ -182,31 +185,38 @@ public class Functions {
 			return b;
 		}
 		final char pre = split[1].toUpperCase().charAt(0);
-		double unit = si ? 10.00D : 10.24D;//si ? 1000 : 1024;
+		double unit = si ? 1000 : 1024;//si ? 10.00D : 10.24D;
 		int exp = 0;
+		double dividend = 1.0D;
 		switch(pre) {
 		case 'K':
-			exp = 3;
+			exp = si ? 3 : 1;
+			dividend = si ? 1000000.0D : 1.0D;
 			break;
 		case 'M':
-			exp = 6;
+			exp = si ? 6 : 2;
+			dividend = si ? 1000000000000.0D : 1.0D;
 			break;
 		case 'G':
-			exp = 9;
+			exp = si ? 9 : 3;
+			dividend = si ? 1000000000000000000.0D : 1.0D;
 			break;
 		case 'T':
-			exp = 12;
+			exp = si ? 12 : 4;
+			dividend = si ? 1000000000000000000000000.0D : 1.0D;
 			break;
 		case 'P':
-			exp = 15;
+			exp = si ? 15 : 5;
+			dividend = si ? 1000000000000000000000000000000.0D : 1.0D;
 			break;
 		case 'E':
-			exp = 18;
+			exp = si ? 18 : 6;
+			dividend = si ? 1000000000000000000000000000000000000.0D : 1.0D;
 			break;
 		default:
 			break;
 		}
-		return(b * Math.pow(unit, exp));// / 1000000000000.0D;
+		return (b * Math.pow(unit, exp)) / dividend;
 	}
 	
 	/** @param bytes The amount of bytes
